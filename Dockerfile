@@ -17,3 +17,6 @@ COPY . /app/
 RUN pip install -e .
 
 CMD ["pipelines"]
+
+# docker build -t pipelines .
+# docker run pipelines
