@@ -1,3 +1,7 @@
+import pandas as pd
+import sqlite3
+import csv
+
 class BaseTask:
     """Base Pipeline Task"""
 
@@ -23,7 +27,17 @@ class CopyToFile(BaseTask):
         return f'{self.table} -> {self.output_file}'
 
     def run(self):
-        print(f"Copy table `{self.table}` to file `{self.output_file}`")
+        con = sqlite3.connect("task.db")
+        cur = con.cursor()
+        
+        clients = pd.read_sql('SELECT * FROM '+ self.table, con)
+        clients.to_csv(self.output_file+".csv", index=False)
+        
+        data = [('id', 'name', 'url', 'domain_of_url')]
+        for row in cur.execute("SELECT * FROM " + self.table):
+            data.append(row)
+    
+        print(f"Copy table '{self.table}' to file '{self.output_file}'")
 
 
 class LoadFile(BaseTask):
@@ -37,7 +51,20 @@ class LoadFile(BaseTask):
         return f'{self.input_file} -> {self.table}'
 
     def run(self):
-        print(f"Load file `{self.input_file}` to table `{self.table}`")
+        data = []
+        with open('original.csv', newline='') as File:  
+            reader = csv.reader(File)
+            for row in reader:
+                #в первой строке названия столбцов
+                if (row[0] != 'id'):
+                    temp = (row[0], row[1], row[2])
+                    data.append(temp)
+        con = sqlite3.connect("task.db")
+        df = pd.read_csv(self.input_file)
+        df.to_sql(self.table, con, if_exists='append', index=False)
+        con.commit()
+        
+        print(f"Load file '{self.input_file}' to table '{self.table}'")
 
 
 class RunSQL(BaseTask):
@@ -51,10 +78,14 @@ class RunSQL(BaseTask):
         return f'{self.title}'
 
     def run(self):
+        con = sqlite3.connect("task.db")
+        cur = con.cursor()
+        cur.execute(self.sql_query)
+        con.commit()
+        
         print(f"Run SQL ({self.title}):\n{self.sql_query}")
 
-
-
+     
 class CTAS(BaseTask):
     """SQL Create Table As Task"""
 
@@ -65,6 +96,16 @@ class CTAS(BaseTask):
 
     def short_description(self):
         return f'{self.title}'
-
+        
     def run(self):
-        print(f"Create table `{self.table}` as SELECT:\n{self.sql_query}")
+        con = sqlite3.connect("task.db")
+        cur = con.cursor()
+
+        def _domain_of_url(x):
+            res = str(x).partition("://")[2].partition("/")[0]
+            return res
+
+        con.create_function("domain_of_url", 1, _domain_of_url)
+        cur.execute("Create table " + self.table + " as " + self.sql_query)
+        
+        print(f"Create table '{self.table}' as SELECT:\n{self.sql_query}")
