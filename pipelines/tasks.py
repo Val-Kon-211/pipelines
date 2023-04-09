@@ -57,7 +57,7 @@ class LoadFile(BaseTask):
             for row in reader:
                 #в первой строке названия столбцов
                 if (row[0] != 'id'):
-                    temp = (row[0], row[1], row[2])
+                    temp = tuple(x for x in row)
                     data.append(temp)
         con = sqlite3.connect("task.db")
         df = pd.read_csv(self.input_file)
