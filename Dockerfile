@@ -1,22 +1,19 @@
-FROM python:3.10-alpine
+FROM python:3.10.2-buster
 
-ENV PIP_DEFAULT_TIMEOUT=100 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1 \
-    POETRY_VERSION=1.4.1
-
+# Set the working directory to /app
 WORKDIR /app
 COPY poetry.lock pyproject.toml /app/
 
-RUN apk add --no-cache gcc libffi-dev musl-dev python3-dev
-RUN pip install poetry==${POETRY_VERSION} 
+RUN pip install --upgrade pip
+RUN pip install --upgrade cython
+
+# Get the 
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-ansi
 
-COPY . /app/
-RUN pip install -e .
-
-CMD ["pipelines"]
-
-# docker build -t pipelines .
-# docker run pipelines
+COPY . .
+EXPOSE 8000
+CMD [ "python", "pipeline.py" ]
