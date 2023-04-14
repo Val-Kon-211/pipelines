@@ -33,7 +33,11 @@ class CopyToFile(BaseTask):
         clients = pd.read_sql('SELECT * FROM '+ self.table, con)
         clients.to_csv(self.output_file+".csv", index=False)
         
-        data = [('id', 'name', 'url', 'domain_of_url')]
+        sql = "SELECT * FROM " + self.table+";" 
+  
+        cur.execute(sql)
+        data = [(x[0] for x in cur.description)]
+        
         for row in cur.execute("SELECT * FROM " + self.table):
             data.append(row)
     
